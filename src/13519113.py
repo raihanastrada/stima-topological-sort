@@ -126,5 +126,7 @@ if __name__ == "__main__":
     graph_list = get_files(filename)
     queue = [] # Hasil topo sort akan ditaruh di queue
     while (len(graph_list) != 0):
+        # Selama graf belum selesai diproses
         topo_sort(graph_list, queue)
+    # {EOP : len(graph_list) == 0, graf selesai diproses}
     print_solusi(queue)
