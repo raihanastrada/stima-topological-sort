@@ -1,3 +1,4 @@
+# Modul yang digunakan
 import os
 
 def get_files(filename):
@@ -9,34 +10,35 @@ def get_files(filename):
         f = open(fpath, "r")
         node = "" # Kode matkul
         prerequisites = "" # Kode matkul prerequisite
-        adjacent_node = [] # List kode matkul prerequisite
+        preq_node = [] # List kode matkul prerequisite
         char = f.read(1)
-        while (char):
+        while (char): # Selama bukan akhir file
             # Ambil kode matkul
             while(char != "," and char != "."):
                 node += char
                 char = f.read(1)
                 # {EOP : char = "," or char = "." selesai mengambil kode matkul}
 
-            if (char != "."): # Jika terdapat matkul prerequisites, char = ","
+            if (char != "."): 
+                # Jika terdapat matkul prerequisites, char = ","
                 char = f.read(1)
                 # Ambil kode matkul prerequisite
                 while(char != "."):
                     if (char == ","):
-                        adjacent_node.append(prerequisites)
+                        preq_node.append(prerequisites)
                         prerequisites = ""
                         char = f.read(1)
                     else:
                         prerequisites += char
                         char = f.read(1)
                     # {EOP : char = "." selesai mengambil kode matkul prerequisites}
-                adjacent_node.append(prerequisites)
+                preq_node.append(prerequisites)
                 prerequisites = ""
 
             # Masukkan ke list graph
-            graph_list.append([node,adjacent_node])
+            graph_list.append([node,preq_node])
             node = ""
-            adjacent_node = []
+            preq_node = []
             
             # Ke next line
             char = f.read(1) 
@@ -50,33 +52,44 @@ def get_files(filename):
     return graph_list
 
 def find_zero_indegree(graph_list):
-    # Mengembalikan index matkul pada graph yang memiliki in-degree = 0
+    # Mengembalikan list index matkul pada graph yang memiliki in-degree = 0
+    zero_indegree = []
     for i in range(len(graph_list)):
         if (len(graph_list[i][1]) == 0):
-            return i
+            zero_indegree.append(i)
+    return zero_indegree
 
-def delete_node(idx,graph_list):
-    matkul = graph_list[idx][0]
-    # Menghapus kode matkul pada setiap adjacent node pada graph_list
-    neff = len(graph_list)
-    i = 0
-    while (i < neff):
+def delete_node(idx_list,graph_list):
+    for i in range(len(idx_list)):
+        matkul = graph_list[idx_list[i]][0] # Mengambil kode matkul
+        # Menghapus kode matkul pada setiap preq node pada graph_list
+        neff = len(graph_list)
+        j = 0
+        while (j < neff):
+            try:
+                graph_list[j][1].remove(matkul)
+                j += 1
+            except:
+                j += 1
+
+    # Menghapus simpul pada graf
+    while (len(idx_list) != 0):
+        del graph_list[idx_list[0]]
+        idx_list.pop(0)
         try:
-            graph_list[i][1].remove(matkul)
-            i += 1
+            for i in range(len(idx_list)):
+                idx_list[i] -= 1
         except:
-            i += 1
+            break
 
-    # Menghapus simpul pada graph_list[idx]
-    del graph_list[idx]
-
-
-def topo_sort(graph_list, queue):
-    idx = find_zero_indegree(graph_list) # Cari index matkul yang memiliki in-degree = 0
-    queue.append(graph_list[idx][0]) # Masukkan matkul ke prioQueue
-    delete_node(idx,graph_list) # Proses pada graf
+def topo_sort(graph_list,queue):
+    idx_list = find_zero_indegree(graph_list) # Cari index matkul yang memiliki in-degree = 0
+    for i in range(len(idx_list)):
+        queue.append(graph_list[idx_list[i]][0]) # Masukkan matkul ke queue
+    delete_node(idx_list,graph_list) # Proses mengurangi & mendelete node pada graf
 
 def to_rome(number):
+    # Mengembalikan angka romawi
     switcher = {
         1: "I    ",
         2: "II   ",
@@ -89,44 +102,30 @@ def to_rome(number):
     }
     return switcher.get(number,"nothing")
 
-def print_solusi(queue):
-    # Menampilkan hasil topo sort dengan format dibagi per semester
-    n = len(queue) // 8 # dibagi 8 semester
-    if(n == 0): 
-        # Jika matkul kurang dari 8
-        for i in range(len(queue)):
-            print("Semester",to_rome(i+1),":",end="")
-            print(queue[i],end="")
-            if (i != len(queue)-1):
-                print("")
-
-    else:
-        idx = 0 # Index queue yang akan diprint
-        remain = len(queue)%8 # Sisa matkul, jumlah matkul tidak dapat dibagi rata
-        for i in range(1,9):
-            print("Semester",to_rome(i),":",end="")
-            for j in range(idx,idx+n):
-                print(queue[j],end="")
-                if(j != idx+n-1):
-                    print(",",end="")
-
-            idx += n
-            if(remain != 0):
-                # Jika terdapat sisa
-                print(","+str(queue[idx]),end="") # Tambah 1 matkul pada semester
-                remain -= 1 # Sisa dikurangi
-                idx += 1
-            if (i != 8):
-                print("")
-    print(".")
+def print_solusi(queue,sem):
+    # Mencetak format solusi
+    print("Semester",to_rome(sem),":",end="")
+    for i in range(len(queue)):
+        print(queue[i],end="")
+        if (i != len(queue)-1):
+            print(",",end="")
+    
+    while(len(queue) != 0):
+        # Hapus elemen queue, karena sudah dicetak
+        queue.pop(0)
 
 # Main Program
 if __name__ == "__main__":
     filename = str(input("Masukkan nama file: "))
     graph_list = get_files(filename)
-    queue = [] # Hasil topo sort akan ditaruh di queue
+    queue = [] # Matkul akan ditaruh di queue
+    sem = 1
     while (len(graph_list) != 0):
         # Selama graf belum selesai diproses
-        topo_sort(graph_list, queue)
+        topo_sort(graph_list,queue)
+        print_solusi(queue,sem)
+        if(len(graph_list) != 0):
+            print("")
+        sem += 1
     # {EOP : len(graph_list) == 0, graf selesai diproses}
-    print_solusi(queue)
+    print(".")
